@@ -12,6 +12,10 @@ config/includes.chroot/usr/local/bin/*
 *.iso
 *.img
 *.hybrid.iso
+*.hybrid.iso.zsync
+*.contents
+*.files
+*.packages
 
 # Docker and editor metadata
 .DS_Store
