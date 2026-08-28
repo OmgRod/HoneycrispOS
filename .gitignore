@@ -26,3 +26,5 @@ chroot.installed_tmp_pkgs
 *.log
 
 chroot.tmp/
+
+.lock

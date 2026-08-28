@@ -1,4 +1,4 @@
-name: Build Honeycrisp OS ISO
+name: Build Honeycrisp OS ISOs
 
 on:
   push:
@@ -10,20 +10,30 @@ on:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            flutter_platform: linux
+          - arch: arm64
+            flutter_platform: linux-arm64
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Flutter SDK
+      - name: Set up Flutter SDK Manually
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y curl git unzip xz-utils zip libglu1-mesa clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev
+          sudo apt-get install -y curl git unzip xz-utils zip libglu1-mesa clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev qemu-user-static binfmt-support
           git clone --depth 1 -b stable https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
           echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
 
       - name: Build Flutter Shell
         run: |
           cd honeycrisp_shell
+          flutter pub get
           flutter build linux --release
 
       - name: Inject Flutter Bundle into Live-Build Tree
@@ -38,11 +48,28 @@ jobs:
       - name: Make Build Script Executable
         run: chmod +x build.sh
 
-      - name: Run Build Script
-        run: ./build.sh
+      - name: Run Build Script for ${{ matrix.arch }}
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          # Clean up any stale locks or cache artifacts on the runner
+          sudo rm -rf cache/bootstrap chroot .build tmp .lock
+          
+          # Pass the matrix architecture down to your build script configuration
+          # (Ensure your build.sh can read $TARGET_ARCH or defaults to amd64)
+          ./build.sh
+
+      - name: Rename ISO Artifact per Architecture
+        run: |
+          # Find the generated hybrid ISO and rename it uniquely
+          if [ -f live-image-amd64.hybrid.iso ]; then
+            mv live-image-amd64.hybrid.iso honeycrisp-os-${{ matrix.arch }}.iso
+          elif [ -f *.iso ]; then
+            mv *.iso honeycrisp-os-${{ matrix.arch }}.iso
+          fi
 
       - name: Upload ISO Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: honeycrisp-os-iso
-          path: '*.iso'
+          name: honeycrisp-os-iso-${{ matrix.arch }}
+          path: honeycrisp-os-${{ matrix.arch }}.iso
