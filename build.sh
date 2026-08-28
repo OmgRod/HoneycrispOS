@@ -17,7 +17,7 @@ echo "Detected architecture: $ARCH (Targeting: $LB_ARCH)"
 
 sudo rm -rf cache/bootstrap chroot .build tmp .lock
 
-echo "Building Honeycrisp OS Docker image first..."
+echo "Building Honeycrisp OS Docker image..."
 docker build -t honeycrisp-builder .
 
 echo "Building Flutter shell inside the Bookworm Docker environment..."
