@@ -4,6 +4,7 @@ xfce4
 xfce4-session
 lightdm
 lightdm-gtk-greeter
+x11-xserver-utils
 
 # Core System Utilities & Networking
 curl
