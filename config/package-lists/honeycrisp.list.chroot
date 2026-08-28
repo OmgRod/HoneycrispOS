@@ -1,9 +1,9 @@
-# Core X11 Display Server & Desktop Environment
+# ==========================================
+# Honeycrisp OS - System Package Manifest
+# ==========================================
+
+# Core X11 Display Server & Utilities
 xorg
-xfce4
-xfce4-session
-lightdm
-lightdm-gtk-greeter
 x11-xserver-utils
 
 # Core System Utilities & Networking
@@ -21,6 +21,8 @@ libglu1-mesa
 libgdk-pixbuf2.0-0
 libpango-1.0-0
 libatk1.0-0
+libgles2-mesa
+libegl1-mesa
 
 # iOS Integration & libimobiledevice Tooling (FFI bindings)
 libimobiledevice-dev
