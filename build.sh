@@ -2,14 +2,14 @@
 set -e
 
 echo "Building Flutter shell..."
-cd /path/to/your/honeycrisp_shell
+cd honeycrisp_shell
 flutter build linux --release
-cd /mnt/Elements/Projects/OS/HoneycrispOS
+cd ..
 
 echo "Injecting Flutter bundle into live-build..."
 mkdir -p config/includes.chroot/usr/lib/honeycrisp-shell
 rm -rf config/includes.chroot/usr/lib/honeycrisp-shell/*
-cp -r /path/to/your/honeycrisp_shell/build/linux/x64/release/bundle/* config/includes.chroot/usr/lib/honeycrisp-shell/
+cp -r honeycrisp_shell/build/linux/x64/release/bundle/* config/includes.chroot/usr/lib/honeycrisp-shell/
 
 chmod +x config/includes.chroot/usr/lib/honeycrisp-shell/honeycrisp_shell
 
