@@ -21,3 +21,5 @@ config/includes.chroot/usr/local/bin/*
 .DS_Store
 .vscode/
 *.log
+
+chroot.tmp/

@@ -19,8 +19,8 @@ ln -sf /usr/lib/honeycrisp_shell/honeycrisp_shell config/includes.chroot/usr/loc
 echo "Building Honeycrisp OS Docker image..."
 docker build -t honeycrisp-builder .
 
-echo "Performing a clean wipe of old build cache..."
-docker run --rm --privileged -v "$(pwd):/workspace" honeycrisp-builder lb clean --all || true
+echo "Performing a deep wipe of all local live-build caches and chroot..."
+docker run --rm --privileged -v "$(pwd):/workspace" honeycrisp-builder bash -c "rm -rf cache/bootstrap chroot .build" || true
 
 echo "Initializing live-build configuration..."
 docker run --rm -v "$(pwd):/workspace" honeycrisp-builder lb config \
