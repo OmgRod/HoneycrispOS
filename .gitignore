@@ -1,0 +1,19 @@
+# Live-build temporary and working directories
+.build/
+chroot/
+binary/
+source/
+cache/
+
+config/includes.chroot/usr/local/bin/*
+!config/includes.chroot/usr/local/bin/.gitkeep
+
+# Generated ISO files
+*.iso
+*.img
+*.hybrid.iso
+
+# Docker and editor metadata
+.DS_Store
+.vscode/
+*.log

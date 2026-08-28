@@ -1,0 +1,19 @@
+# Honeycrisp OS Plymouth Boot Script
+
+# Set deep, clean dark background color
+Window.SetBackgroundTopColor(0.06, 0.06, 0.08);
+Window.SetBackgroundBottomColor(0.03, 0.03, 0.04);
+
+# Load the apple branding logo
+logo_image = Image("logo.png");
+logo_sprite = Sprite(logo_image);
+
+# Center the logo dynamically on any screen resolution
+logo_sprite.SetX(Window.GetWidth() / 2 - logo_image.GetWidth() / 2);
+logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2);
+
+# Optional fade-in or pulse loop can go here if desired
+fun refresh_callback () {
+    # Keep screen refreshed during boot sequence
+}
+Plymouth.SetRefreshFunction(refresh_callback);

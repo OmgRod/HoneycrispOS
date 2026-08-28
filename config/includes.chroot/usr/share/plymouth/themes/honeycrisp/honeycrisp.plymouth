@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Honeycrisp OS
+Description=A crisp, clean boot splash for Honeycrisp OS
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/honeycrisp
+ScriptFile=/usr/share/plymouth/themes/honeycrisp/honeycrisp.script
