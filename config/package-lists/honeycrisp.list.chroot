@@ -1,3 +1,12 @@
+xorg
+xfce4
+xfce4-session
+lightdm
+lightdm-gtk-greeter
+curl
+ca-certificates
+alsa-utils
+fonts-inter
 libgtk-3-0
 libstdc++6
 libglu1-mesa

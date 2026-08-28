@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+sudo rm -rf cache/bootstrap chroot .build tmp .lock
+
 echo "Building Flutter shell..."
 cd honeycrisp_shell
 flutter build linux --release

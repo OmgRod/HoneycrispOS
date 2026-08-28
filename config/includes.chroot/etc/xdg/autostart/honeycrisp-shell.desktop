@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=HoneycrispShell
+Comment=Launch Honeycrisp OS Flutter Shell
+Exec=/usr/local/bin/honeycrisp_shell
+Terminal=false
+Categories=System;
+X-GNOME-Autostart-enabled=true
