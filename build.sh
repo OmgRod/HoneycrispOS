@@ -20,6 +20,9 @@ sudo rm -rf cache/bootstrap chroot .build tmp .lock
 echo "Building Honeycrisp OS Docker image..."
 docker build -t honeycrisp-builder .
 
+echo "Cleaning old Flutter build artifacts to clear stale CMake caches..."
+rm -rf honeycrisp_shell/build honeycrisp_shell/.dart_tool
+
 echo "Building Flutter shell inside the Bookworm Docker environment..."
 docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter build linux --release
 
