@@ -9,16 +9,18 @@ config/includes.chroot/usr/local/bin/*
 !config/includes.chroot/usr/local/bin/.gitkeep
 
 # Generated ISO files
-honeycrisp-os-amd64.iso
-honeycrisp-os-amd64.img
-honeycrisp-os-amd64.hybrid.iso
-honeycrisp-os-amd64.hybrid.iso.zsync
-honeycrisp-os-amd64.contents
-honeycrisp-os-amd64.files
+honeycrisp-os-*.iso
+honeycrisp-os-*.img
+honeycrisp-os-*.hybrid.iso
+honeycrisp-os-*.hybrid.iso.zsync
+honeycrisp-os-*.contents
+honeycrisp-os-*.files
+honeycrisp-os-*.packages
 chroot.files
-honeycrisp-os-amd64.packages
 binary.modified_timestamps
 chroot.installed_tmp_pkgs
+chroot.packages.install
+chroot.packages.live
 
 # Docker and editor metadata
 .DS_Store

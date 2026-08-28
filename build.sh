@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-# Detect host architecture and map to live-build / Flutter formats
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
     LB_ARCH="amd64"
@@ -34,6 +33,10 @@ chmod +x config/includes.chroot/usr/lib/honeycrisp_shell/honeycrisp_shell
 
 mkdir -p config/includes.chroot/usr/local/bin
 ln -sf /usr/lib/honeycrisp_shell/honeycrisp_shell config/includes.chroot/usr/local/bin/honeycrisp_shell
+
+echo "Enabling Honeycrisp shell systemd service..."
+mkdir -p config/includes.chroot/etc/systemd/system/graphical.target.wants
+ln -sf /etc/systemd/system/honeycrisp-shell.service config/includes.chroot/etc/systemd/system/graphical.target.wants/honeycrisp-shell.service
 
 echo "Building Honeycrisp OS Docker image..."
 docker build -t honeycrisp-builder .

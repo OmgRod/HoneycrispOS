@@ -1,0 +1,18 @@
+[Unit]
+Description=Honeycrisp OS Flutter Shell Service
+After=graphical.target lightdm.service
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=honeycrisp
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/honeycrisp/.Xauthority
+# Wait until the X server is actively responding before launching the binary
+ExecStartPre=/bin/sh -c 'until xset q >/dev/null 2>&1; do sleep 0.5; done'
+ExecStart=/usr/local/bin/honeycrisp_shell
+Restart=on-failure
+RestartSec=3s
+
+[Install]
+WantedBy=graphical.target

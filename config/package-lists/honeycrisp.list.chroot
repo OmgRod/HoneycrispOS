@@ -1,15 +1,33 @@
+# Core X11 Display Server & Desktop Environment
 xorg
 xfce4
 xfce4-session
 lightdm
 lightdm-gtk-greeter
+
+# Core System Utilities & Networking
 curl
 ca-certificates
 alsa-utils
+
+# System Fonts
 fonts-inter
+
+# Flutter Linux GTK & Graphics Runtime Dependencies
 libgtk-3-0
 libstdc++6
 libglu1-mesa
 libgdk-pixbuf2.0-0
 libpango-1.0-0
 libatk1.0-0
+
+# iOS Integration & libimobiledevice Tooling (FFI bindings)
+libimobiledevice-dev
+libplist-dev
+usbmuxd
+
+# Live Boot Configuration Hooks
+live-boot
+live-config
+live-config-systemd
+systemd-sysv
