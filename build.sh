@@ -1,6 +1,21 @@
 #!/bin/bash
 set -e
 
+# Detect host architecture and map to live-build / Flutter formats
+ARCH=$(uname -m)
+if [ "$ARCH" = "x86_64" ]; then
+    LB_ARCH="amd64"
+    FLUTTER_ARCH="x64"
+elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    LB_ARCH="arm64"
+    FLUTTER_ARCH="arm64"
+else
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
+echo "Detected architecture: $ARCH (Targeting: $LB_ARCH)"
+
 sudo rm -rf cache/bootstrap chroot .build tmp .lock
 
 echo "Building Flutter shell..."
@@ -9,9 +24,11 @@ flutter build linux --release
 cd ..
 
 echo "Injecting Flutter bundle into live-build..."
+BUNDLE_PATH="honeycrisp_shell/build/linux/$FLUTTER_ARCH/release/bundle"
+
 mkdir -p config/includes.chroot/usr/lib/honeycrisp_shell
 rm -rf config/includes.chroot/usr/lib/honeycrisp_shell/*
-cp -r honeycrisp_shell/build/linux/x64/release/bundle/* config/includes.chroot/usr/lib/honeycrisp_shell/
+cp -r "$BUNDLE_PATH"/* config/includes.chroot/usr/lib/honeycrisp_shell/
 
 chmod +x config/includes.chroot/usr/lib/honeycrisp_shell/honeycrisp_shell
 
@@ -27,8 +44,8 @@ docker run --rm --privileged -v "$(pwd):/workspace" honeycrisp-builder bash -c "
 echo "Initializing live-build configuration..."
 docker run --rm -v "$(pwd):/workspace" honeycrisp-builder lb config \
     --distribution bookworm \
-    --architectures amd64 \
-    --image-name honeycrisp-os
+    --architectures "$LB_ARCH" \
+    --image-name "honeycrisp-os-$LB_ARCH"
 
 echo "Starting ISO compilation inside Docker..."
 docker run --rm --privileged -v "$(pwd):/workspace" honeycrisp-builder lb build
