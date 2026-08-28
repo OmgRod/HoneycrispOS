@@ -18,20 +18,18 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y curl git unzip xz-utils zip libglu1-mesa clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev
-          
-          # Clone stable Flutter directly to a temp path
           git clone --depth 1 -b stable https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
           echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
 
       - name: Build Flutter Shell
         run: |
-          cd /path/to/honeycrisp_shell  # Update to your actual Flutter project path if nested
+          cd honeycrisp_shell
           flutter build linux --release
 
       - name: Inject Flutter Bundle into Live-Build Tree
         run: |
           mkdir -p config/includes.chroot/usr/lib/honeycrisp-shell
-          cp -r /path/to/honeycrisp_shell/build/linux/x64/release/bundle/* config/includes.chroot/usr/lib/honeycrisp-shell/
+          cp -r honeycrisp_shell/build/linux/x64/release/bundle/* config/includes.chroot/usr/lib/honeycrisp-shell/
           chmod +x config/includes.chroot/usr/lib/honeycrisp-shell/honeycrisp_shell
           
           mkdir -p config/includes.chroot/usr/local/bin
