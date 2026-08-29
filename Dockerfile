@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter \
     && cd /usr/local/flutter \
-    && git checkout 3.19.6
+    && git checkout stable
 
 ENV PATH="/usr/local/flutter/bin:/usr/local/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
