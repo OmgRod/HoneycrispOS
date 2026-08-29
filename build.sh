@@ -24,10 +24,12 @@ echo "Cleaning old Flutter build artifacts to clear stale CMake caches..."
 rm -rf honeycrisp_shell/build honeycrisp_shell/.dart_tool
 
 echo "Building Flutter shell inside the Bookworm Docker environment..."
-docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter clean
-docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder rm -f pubspec.lock
-docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter pub get
-docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter build linux --release
+docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder bash -c "\
+    flutter clean && \
+    rm -f pubspec.lock && \
+    flutter pub get && \
+    flutter build linux --release \
+"
 
 echo "Injecting Flutter bundle into live-build..."
 BUNDLE_PATH="honeycrisp_shell/build/linux/$FLUTTER_ARCH/release/bundle"
