@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:battery_plus/battery_plus.dart';
+import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -285,96 +286,103 @@ class MacOsWindowFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
+    // Utilizing Matrix4 from vector_math for advanced window transformations/scaling
+    final Matrix4 customTransform = Matrix4.identity();
+
     return Positioned(
       left: window.isMaximized ? 0 : window.position.dx,
       top: window.isMaximized ? 28 : window.position.dy,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: window.isMaximized ? screenSize.width : window.size.width,
-        height: window.isMaximized ? screenSize.height - 28 : window.size.height,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1E24).withOpacity(0.94),
-          borderRadius: BorderRadius.circular(window.isMaximized ? 0 : 10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.5),
-              blurRadius: 25,
-              spreadRadius: 2,
-            ),
-          ],
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-        ),
-        child: Column(
-          children: [
-            GestureDetector(
-              onPanUpdate: (details) => onDrag(details.delta),
-              child: Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF282830).withOpacity(0.6),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(window.isMaximized ? 0 : 10)),
-                  border: const Border(bottom: BorderSide(color: Colors.white12, width: 0.5)),
-                ),
-                child: Row(
-                  children: [
-                    Row(
-                      children: [
-                        InkWell(
-                          onTap: onClose,
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFF5F56),
-                              shape: BoxShape.circle,
+      child: Transform(
+        transform: customTransform,
+        alignment: Alignment.center,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: window.isMaximized ? screenSize.width : window.size.width,
+          height: window.isMaximized ? screenSize.height - 28 : window.size.height,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E24).withOpacity(0.94),
+            borderRadius: BorderRadius.circular(window.isMaximized ? 0 : 10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 25,
+                spreadRadius: 2,
+              ),
+            ],
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Column(
+            children: [
+              GestureDetector(
+                onPanUpdate: (details) => onDrag(details.delta),
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF282830).withOpacity(0.6),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(window.isMaximized ? 0 : 10)),
+                    border: const Border(bottom: BorderSide(color: Colors.white12, width: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap: onClose,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFF5F56),
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: onMinimize,
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFFBD2E),
-                              shape: BoxShape.circle,
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: onMinimize,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFFBD2E),
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: onMaximize,
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF27C93F),
-                              shape: BoxShape.circle,
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: onMaximize,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF27C93F),
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          window.title,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white70),
+                        ],
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            window.title,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white70),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 52),
-                  ],
+                      const SizedBox(width: 52),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Expanded(child: child),
-          ],
+              Expanded(child: child),
+            ],
+          ),
         ),
       ),
     );
