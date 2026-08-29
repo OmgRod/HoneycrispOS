@@ -25,6 +25,7 @@ rm -rf honeycrisp_shell/build honeycrisp_shell/.dart_tool
 
 echo "Building Flutter shell inside the Bookworm Docker environment..."
 docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter clean
+docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder rm -f pubspec.lock
 docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter pub get
 docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter build linux --release
 
@@ -51,7 +52,7 @@ mkdir -p config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xm
 rm -rf /tmp/whitesur-theme /tmp/whitesur-output
 git clone --depth 1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git /tmp/whitesur-theme
 mkdir -p /tmp/whitesur-output/usr/share/themes
-/tmp/whitesur-theme/install.sh -m dark -d /tmp/whitesur-output/usr/share/themes || true
+/tmp/whitesur-theme/install.sh --dest /tmp/whitesur-output/usr/share/themes --theme dark || /tmp/whitesur-theme/install.sh -d /tmp/whitesur-output/usr/share/themes || true
 cp -r /tmp/whitesur-output/usr/share/themes/* config/includes.chroot/usr/share/themes/ || true
 
 cat << 'EOF' > config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml

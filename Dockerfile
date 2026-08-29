@@ -12,9 +12,10 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libgtk-3-dev \
     liblzma-dev \
+    live-build \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter
+RUN git clone -b stable https://github.com/flutter/flutter.git /usr/local/flutter
 ENV PATH="/usr/local/flutter/bin:/usr/local/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
 RUN flutter doctor
