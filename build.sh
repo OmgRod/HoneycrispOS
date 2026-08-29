@@ -48,8 +48,10 @@ echo "Injecting macOS GTK themes into live-build chroot..."
 mkdir -p config/includes.chroot/usr/share/themes
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
 
+rm -rf /tmp/whitesur-theme /tmp/whitesur-output
 git clone --depth 1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git /tmp/whitesur-theme
-/tmp/whitesur-theme/install.sh -t dark -l -d /tmp/whitesur-output/usr/share/themes || true
+mkdir -p /tmp/whitesur-output/usr/share/themes
+/tmp/whitesur-theme/install.sh -m dark -d /tmp/whitesur-output/usr/share/themes || true
 cp -r /tmp/whitesur-output/usr/share/themes/* config/includes.chroot/usr/share/themes/ || true
 
 cat << 'EOF' > config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml

@@ -33,6 +33,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   window_manager: ^0.3.9
   battery_plus: ^6.2.2
+  vector_math: ^2.1.4
 
 dev_dependencies:
   flutter_test:
