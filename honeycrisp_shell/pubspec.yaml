@@ -5,20 +5,20 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.4 <4.0.0'
+  sdk: ^3.13.2
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
-  window_manager: ^0.3.9
-  battery_plus: ^6.0.2
-  vector_math: ^2.1.4
+  cupertino_icons: ^1.0.9
+  window_manager: ^0.5.2
+  battery_plus: ^7.1.1
+  vector_math: ^2.4.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
