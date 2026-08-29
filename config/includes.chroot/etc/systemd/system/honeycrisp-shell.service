@@ -10,11 +10,13 @@ Group=honeycrisp
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/honeycrisp/.Xauthority
 Environment=XDG_RUNTIME_DIR=/run/user/1000
-ExecStartPre=/bin/sh -c 'until xset q >/dev/null 2>&1; do sleep 0.5; done'
+# Wait for LightDM to initialize
+ExecStartPre=/bin/sh -c 'until xset q >/dev/null 2>&1; do sleep 1; done'
 WorkingDirectory=/usr/lib/honeycrisp_shell
 ExecStart=/usr/lib/honeycrisp_shell/honeycrisp_shell
-Restart=on-failure
-RestartSec=3s
+# Keep it running
+Restart=always
+RestartSec=5s
 
 [Install]
 WantedBy=graphical.target

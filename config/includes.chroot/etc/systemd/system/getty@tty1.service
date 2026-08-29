@@ -1,0 +1,14 @@
+[Unit]
+Description=Getty on tty1
+IgnoreOnIsolate=yes
+DefaultDependencies=no
+After=rc-local.service plymouth-start.service
+Before=getty-pre.target
+ConditionPathExists=/dev/tty1
+
+[Service]
+Type=idle
+ExecStart=
+# Mask getty on tty1 to prevent interference with graphical environment
+ExecStart=/bin/true
+Restart=no
