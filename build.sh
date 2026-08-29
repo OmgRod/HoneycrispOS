@@ -51,13 +51,14 @@ echo "Injecting macOS GTK themes into live-build chroot..."
 mkdir -p config/includes.chroot/usr/share/themes
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
 
-rm -rf /tmp/whitesur-theme /tmp/whitesur-output
-git clone --depth 1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git /tmp/whitesur-theme
-mkdir -p /tmp/whitesur-output/usr/share/themes
-
-# Fixed the WhiteSur install flags here:
-/tmp/whitesur-theme/install.sh -d /tmp/whitesur-output/usr/share/themes -c dark || true
-cp -r /tmp/whitesur-output/usr/share/themes/* config/includes.chroot/usr/share/themes/ || true
+echo "Building WhiteSur theme inside Docker to avoid host dependency issues..."
+docker run --rm -v "$(pwd):/workspace" honeycrisp-builder bash -c "\
+    rm -rf /tmp/whitesur-theme /tmp/whitesur-output && \
+    git clone --depth 1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git /tmp/whitesur-theme && \
+    mkdir -p /tmp/whitesur-output/usr/share/themes && \
+    /tmp/whitesur-theme/install.sh -d /tmp/whitesur-output/usr/share/themes -c dark && \
+    cp -r /tmp/whitesur-output/usr/share/themes/* /workspace/config/includes.chroot/usr/share/themes/ \
+"
 
 cat << 'EOF' > config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -77,6 +78,20 @@ docker run --rm -v "$(pwd):/workspace" honeycrisp-builder lb config \
     --distribution bookworm \
     --architectures "$LB_ARCH" \
     --image-name "honeycrisp-os-$LB_ARCH"
+
+echo "Injecting required OS packages into live-build..."
+mkdir -p config/package-lists
+cat << 'EOF' > config/package-lists/honeycrisp.list.chroot
+live-boot
+live-config
+live-config-systemd
+sudo
+user-setup
+xserver-xorg
+xinit
+libgtk-3-0
+libgl1-mesa-dri
+EOF
 
 echo "Starting ISO compilation inside Docker..."
 docker run --rm --privileged -v "$(pwd):/workspace" honeycrisp-builder lb build
