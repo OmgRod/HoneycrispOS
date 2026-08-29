@@ -24,6 +24,8 @@ echo "Cleaning old Flutter build artifacts to clear stale CMake caches..."
 rm -rf honeycrisp_shell/build honeycrisp_shell/.dart_tool
 
 echo "Building Flutter shell inside the Bookworm Docker environment..."
+docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter clean
+docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter pub get
 docker run --rm -v "$(pwd):/workspace" -w /workspace/honeycrisp_shell honeycrisp-builder flutter build linux --release
 
 echo "Injecting Flutter bundle into live-build..."
@@ -41,6 +43,24 @@ ln -sf /usr/lib/honeycrisp_shell/honeycrisp_shell config/includes.chroot/usr/loc
 echo "Enabling Honeycrisp shell systemd service..."
 mkdir -p config/includes.chroot/etc/systemd/system/graphical.target.wants
 ln -sf /etc/systemd/system/honeycrisp-shell.service config/includes.chroot/etc/systemd/system/graphical.target.wants/honeycrisp-shell.service
+
+echo "Injecting macOS GTK themes into live-build chroot..."
+mkdir -p config/includes.chroot/usr/share/themes
+mkdir -p config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
+
+git clone --depth 1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git /tmp/whitesur-theme
+/tmp/whitesur-theme/install.sh -t dark -l -d /tmp/whitesur-output/usr/share/themes || true
+cp -r /tmp/whitesur-output/usr/share/themes/* config/includes.chroot/usr/share/themes/ || true
+
+cat << 'EOF' > config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="theme" type="string" value="WhiteSur-Dark"/>
+    <property name="button_layout" type="string" value="cl|h"/>
+  </property>
+</channel>
+EOF
 
 echo "Performing a deep wipe of all local live-build caches and chroot..."
 docker run --rm --privileged -v "$(pwd):/workspace" honeycrisp-builder bash -c "rm -rf cache/bootstrap chroot .build" || true

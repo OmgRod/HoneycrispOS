@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'dart:io';
+import 'package:battery_plus/battery_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,23 +48,33 @@ class HoneycrispOSApp extends StatelessWidget {
   }
 }
 
-class WindowAppModel {
+class SystemApp {
+  final String id;
+  final String name;
+  final String execCommand;
+
+  SystemApp({
+    required this.id,
+    required this.name,
+    required this.execCommand,
+  });
+}
+
+class WindowModel {
   final String id;
   final String title;
-  final IconData icon;
   bool isOpen;
   bool isMaximized;
   Offset position;
   Size size;
 
-  WindowAppModel({
+  WindowModel({
     required this.id,
     required this.title,
-    required this.icon,
     this.isOpen = false,
     this.isMaximized = false,
     this.position = const Offset(150, 100),
-    this.size = const Size(700, 450),
+    this.size = const Size(720, 480),
   });
 }
 
@@ -73,23 +86,95 @@ class DesktopShell extends StatefulWidget {
 }
 
 class _DesktopShellState extends State<DesktopShell> {
-  final List<WindowAppModel> _apps = [
-    WindowAppModel(id: 'files', title: 'Files', icon: Icons.folder_rounded),
-    WindowAppModel(id: 'terminal', title: 'Terminal', icon: Icons.terminal_rounded),
-    WindowAppModel(id: 'settings', title: 'System Settings', icon: Icons.settings_rounded),
+  List<SystemApp> _installedApps = [];
+  bool _isLauncherOpen = false;
+  final List<WindowModel> _windows = [
+    WindowModel(id: 'welcome', title: 'Welcome - Honeycrisp OS', isOpen: true),
   ];
 
-  void _toggleApp(String id) {
+  @override
+  void initState() {
+    super.initState();
+    _scanInstalledApps();
+  }
+
+  void _scanInstalledApps() {
+    final List<String> searchPaths = [
+      '/usr/share/applications',
+      '/usr/local/share/applications',
+    ];
+
+    final Map<String, SystemApp> appsMap = {};
+
+    for (var path in searchPaths) {
+      final dir = Directory(path);
+      if (dir.existsSync()) {
+        try {
+          for (var entity in dir.listSync()) {
+            if (entity is File && entity.path.endsWith('.desktop')) {
+              _parseDesktopFile(entity, appsMap);
+            }
+          }
+        } catch (e) {
+          debugPrint('Error scanning path $path: $e');
+        }
+      }
+    }
+
     setState(() {
-      final app = _apps.firstWhere((a) => a.id == id);
-      app.isOpen = !app.isOpen;
+      _installedApps = appsMap.values.toList();
+      _installedApps.sort((a, b) => a.name.compareTo(b.name));
     });
   }
 
-  void _launchSystemProcess(String executable) {
-    // Spawns native host applications directly from the shell interface
-    Process.run(executable, []).catchError((e) {
-      print('Failed to launch process: $e');
+  void _parseDesktopFile(File file, Map<String, SystemApp> appsMap) {
+    try {
+      String? name;
+      String? exec;
+      bool noDisplay = false;
+
+      for (var line in file.readAsLinesSync()) {
+        line = line.trim();
+        if (line.startsWith('Name=')) {
+          name ??= line.substring(5);
+        } else if (line.startsWith('Exec=')) {
+          exec ??= line.substring(5).replaceAll(RegExp(r' %[fFuUdDnNpk%]'), '').trim();
+        } else if (line == 'NoDisplay=true') {
+          noDisplay = true;
+        }
+      }
+
+      if (name != null && exec != null && !noDisplay) {
+        final id = file.uri.pathSegments.last;
+        appsMap[id] = SystemApp(
+          id: id,
+          name: name,
+          execCommand: exec,
+        );
+      }
+    } catch (_) {}
+  }
+
+  void _launchApp(SystemApp app) {
+    try {
+      Process.start(app.execCommand, [], mode: ProcessStartMode.detached);
+      setState(() => _isLauncherOpen = false);
+    } catch (e) {
+      debugPrint('Failed to launch ${app.name}: $e');
+    }
+  }
+
+  void _openWindow(String id, String title) {
+    setState(() {
+      final existing = _windows.firstWhere(
+        (w) => w.id == id,
+        orElse: () => WindowModel(id: id, title: title),
+      );
+      if (!_windows.contains(existing)) {
+        _windows.add(existing);
+      }
+      existing.isOpen = true;
+      _isLauncherOpen = false;
     });
   }
 
@@ -98,7 +183,6 @@ class _DesktopShellState extends State<DesktopShell> {
     return Scaffold(
       body: Stack(
         children: [
-          // Wallpaper Background
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -108,179 +192,49 @@ class _DesktopShellState extends State<DesktopShell> {
               ),
             ),
           ),
-
-          // Top macOS-style Menu Bar
+          for (var window in _windows)
+            if (window.isOpen)
+              MacOsWindowFrame(
+                window: window,
+                onClose: () => setState(() => window.isOpen = false),
+                onMaximize: () => setState(() => window.isMaximized = !window.isMaximized),
+                onMinimize: () => setState(() => window.isOpen = false),
+                onDrag: (delta) {
+                  if (!window.isMaximized) {
+                    setState(() {
+                      window.position += delta;
+                    });
+                  }
+                },
+                child: _buildWindowBody(window.id),
+              ),
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            child: Container(
-              height: 28,
-              color: Colors.black.withOpacity(0.5),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: const [
-                      Icon(Icons.apple, size: 16, color: Colors.white70),
-                      SizedBox(width: 16),
-                      Text('Honeycrisp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      SizedBox(width: 16),
-                      Text('File', style: TextStyle(fontSize: 13, color: Colors.white70)),
-                      SizedBox(width: 16),
-                      Text('Edit', style: TextStyle(fontSize: 13, color: Colors.white70)),
-                      SizedBox(width: 16),
-                      Text('View', style: TextStyle(fontSize: 13, color: Colors.white70)),
-                    ],
-                  ),
-                  Row(
-                    children: const [
-                      Text('100% 🔋', style: TextStyle(fontSize: 12)),
-                      SizedBox(width: 12),
-                      Text('Sat Aug 29', style: TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                ],
-              ),
+            child: TopMenuBar(
+              onLogoTap: () => setState(() => _isLauncherOpen = !_isLauncherOpen),
             ),
           ),
-
-          // Render Active Floating Windows inside the Desktop Canvas
-          for (var app in _apps)
-            if (app.isOpen)
-              Positioned(
-                left: app.isMaximized ? 0 : app.position.dx,
-                top: app.isMaximized ? 28 : app.position.dy,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: app.isMaximized ? MediaQuery.of(context).size.width : app.size.width,
-                  height: app.isMaximized ? MediaQuery.of(context).size.height - 28 : app.size.height,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22222A).withOpacity(0.96),
-                    borderRadius: BorderRadius.circular(app.isMaximized ? 0 : 12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                    border: Border.all(color: Colors.white.withOpacity(0.12)),
-                  ),
-                  child: Column(
-                    children: [
-                      // Window Header / Title Bar
-                      GestureDetector(
-                        onPanUpdate: (details) {
-                          if (!app.isMaximized) {
-                            setState(() {
-                              app.position += details.delta;
-                            });
-                          }
-                        },
-                        child: Container(
-                          height: 36,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: const BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Colors.white12, width: 0.5)),
-                          ),
-                          child: Row(
-                            children: [
-                              Row(
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => setState(() => app.isOpen = false),
-                                    child: Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFFF5F56),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFFFBD2E),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  GestureDetector(
-                                    onTap: () => setState(() => app.isMaximized = !app.isMaximized),
-                                    child: Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF27C93F),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Expanded(
-                                child: Center(
-                                  child: Text(
-                                    app.title,
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white70),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 52),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // Window Body Content
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: _buildWindowContent(app.id),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-          // Bottom macOS Dock with Real Icons
+          if (_isLauncherOpen)
+            AppLauncherOverlay(
+              apps: _installedApps,
+              onAppSelected: _launchApp,
+              onClose: () => setState(() => _isLauncherOpen = false),
+            ),
           Positioned(
             bottom: 12,
             left: 0,
             right: 0,
-            child: Center(
-              child: Container(
-                height: 68,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Colors.white.withOpacity(0.15)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 15,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildDockItem(Icons.folder_rounded, 'Files', Colors.blueAccent, () => _toggleApp('files')),
-                    _buildDockItem(Icons.terminal_rounded, 'Terminal', Colors.grey[900]!, () => _toggleApp('terminal')),
-                    _buildDockItem(Icons.settings_rounded, 'Settings', Colors.blueGrey, () => _toggleApp('settings')),
-                    const VerticalDivider(color: Colors.white24, indent: 10, endIndent: 10, width: 20),
-                    _buildDockItem(Icons.launch_rounded, 'Launch Native App', Colors.orangeAccent, () {
-                      _launchSystemProcess('thunar'); // Example system call hook
-                    }),
-                  ],
-                ),
-              ),
+            child: DesktopDock(
+              onOpenLauncher: () => setState(() => _isLauncherOpen = !_isLauncherOpen),
+              onOpenWelcome: () => _openWindow('welcome', 'Welcome - Honeycrisp OS'),
+              onLaunchTerminal: () => Process.start('xterm', [], mode: ProcessStartMode.detached).catchError((_) {
+                Process.start('gnome-terminal', [], mode: ProcessStartMode.detached);
+              }),
+              onLaunchFiles: () => Process.start('thunar', [], mode: ProcessStartMode.detached).catchError((_) {
+                Process.start('nautilus', [], mode: ProcessStartMode.detached);
+              }),
             ),
           ),
         ],
@@ -288,51 +242,377 @@ class _DesktopShellState extends State<DesktopShell> {
     );
   }
 
-  Widget _buildWindowContent(String appId) {
-    switch (appId) {
-      case 'files':
-        return Column(
+  Widget _buildWindowBody(String id) {
+    if (id == 'welcome') {
+      return Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Text('File Manager', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Hello, Rod.', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             SizedBox(height: 12),
-            Text('/usr/lib/honeycrisp_shell', style: TextStyle(color: Colors.white60, fontFamily: 'monospace')),
-            Divider(color: Colors.white24),
-            Expanded(child: Center(child: Text('Storage path initialized.', style: TextStyle(color: Colors.white60)))),
-          ],
-        );
-      case 'terminal':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('Honeycrisp Terminal', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            SizedBox(height: 12),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.all(Radius.circular(8))),
-                child: Text('honeycrisp@debian:~$ uname -r\n6.1.0-18-amd64\nhoneycrisp@debian:~$', 
-                  style: TextStyle(fontFamily: 'monospace', color: Colors.greenAccent, fontSize: 13)),
-              ),
+            Text(
+              'Your custom Linux desktop shell is running with modular window compositing, authentic macOS traffic-light controls, and zero emoji clutter.',
+              style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.4),
             ),
           ],
-        );
-      case 'settings':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('Settings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            SizedBox(height: 12),
-            Text('Custom Window Compositor Engine Active.', style: TextStyle(color: Colors.white60)),
+        ),
+      );
+    }
+    return const Center(child: Text('Window content active'));
+  }
+}
+
+class MacOsWindowFrame extends StatelessWidget {
+  final WindowModel window;
+  final VoidCallback onClose;
+  final VoidCallback onMaximize;
+  final VoidCallback onMinimize;
+  final Function(Offset) onDrag;
+  final Widget child;
+
+  const MacOsWindowFrame({
+    super.key,
+    required this.window,
+    required this.onClose,
+    required this.onMaximize,
+    required this.onMinimize,
+    required this.onDrag,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+
+    return Positioned(
+      left: window.isMaximized ? 0 : window.position.dx,
+      top: window.isMaximized ? 28 : window.position.dy,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: window.isMaximized ? screenSize.width : window.size.width,
+        height: window.isMaximized ? screenSize.height - 28 : window.size.height,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E24).withOpacity(0.94),
+          borderRadius: BorderRadius.circular(window.isMaximized ? 0 : 10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 25,
+              spreadRadius: 2,
+            ),
           ],
-        );
-      default:
-        return const Center(child: Text('App running'));
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Column(
+          children: [
+            GestureDetector(
+              onPanUpdate: (details) => onDrag(details.delta),
+              child: Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF282830).withOpacity(0.6),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(window.isMaximized ? 0 : 10)),
+                  border: const Border(bottom: BorderSide(color: Colors.white12, width: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Row(
+                      children: [
+                        InkWell(
+                          onTap: onClose,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF5F56),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: onMinimize,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFFBD2E),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: onMaximize,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF27C93F),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          window.title,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white70),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 52),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TopMenuBar extends StatelessWidget {
+  final VoidCallback onLogoTap;
+
+  const TopMenuBar({super.key, required this.onLogoTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 28,
+      color: Colors.black.withOpacity(0.55),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: onLogoTap,
+                child: Image.asset(
+                  'assets/images/honeycrisp_logo.png',
+                  width: 18,
+                  height: 18,
+                  errorBuilder: (context, error, stackTrace) => const Icon(CupertinoIcons.square_grid_2x2, size: 16, color: Colors.white70),
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Text('Honeycrisp OS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(width: 16),
+              const Text('File', style: TextStyle(fontSize: 13, color: Colors.white70)),
+              const SizedBox(width: 16),
+              const Text('Edit', style: TextStyle(fontSize: 13, color: Colors.white70)),
+              const SizedBox(width: 16),
+              const Text('View', style: TextStyle(fontSize: 13, color: Colors.white70)),
+            ],
+          ),
+          Row(
+            children: const [
+              BatteryIndicatorWidget(),
+              SizedBox(width: 12),
+              Text('Sat Aug 29', style: TextStyle(fontSize: 12, color: Colors.white70)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class BatteryIndicatorWidget extends StatefulWidget {
+  const BatteryIndicatorWidget({super.key});
+
+  @override
+  State<BatteryIndicatorWidget> createState() => _BatteryIndicatorWidgetState();
+}
+
+class _BatteryIndicatorWidgetState extends State<BatteryIndicatorWidget> {
+  final Battery _battery = Battery();
+  int? _batteryLevel;
+  bool _hasBattery = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBattery();
+  }
+
+  Future<void> _checkBattery() async {
+    try {
+      final level = await _battery.batteryLevel;
+      setState(() {
+        _batteryLevel = level;
+        _hasBattery = true;
+      });
+    } catch (_) {
+      setState(() {
+        _hasBattery = false;
+      });
     }
   }
 
-  Widget _buildDockItem(IconData icon, String tooltip, Color bg, VoidCallback onTap) {
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasBattery || _batteryLevel == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$_batteryLevel%', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+        const SizedBox(width: 4),
+        const Icon(CupertinoIcons.battery_25, size: 16, color: Colors.white70),
+      ],
+    );
+  }
+}
+
+class AppLauncherOverlay extends StatelessWidget {
+  final List<SystemApp> apps;
+  final Function(SystemApp) onAppSelected;
+  final VoidCallback onClose;
+
+  const AppLauncherOverlay({
+    super.key,
+    required this.apps,
+    required this.onAppSelected,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onClose,
+        child: Container(
+          color: Colors.black.withOpacity(0.65),
+          padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 48),
+          child: Center(
+            child: Container(
+              width: 800,
+              height: 500,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E26).withOpacity(0.95),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.12)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 30),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text('Installed Applications', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  ),
+                  const Divider(height: 1, color: Colors.white24),
+                  Expanded(
+                    child: apps.isEmpty
+                        ? const Center(child: CircularProgressIndicator())
+                        : GridView.builder(
+                            padding: const EdgeInsets.all(20),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 20,
+                              mainAxisSpacing: 20,
+                              childAspectRatio: 1.1,
+                            ),
+                            itemCount: apps.length,
+                            itemBuilder: (context, index) {
+                              final app = apps[index];
+                              return InkWell(
+                                onTap: () => onAppSelected(app),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Icon(CupertinoIcons.app_badge, size: 30, color: Colors.white),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      app.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12, color: Colors.white60),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DesktopDock extends StatelessWidget {
+  final VoidCallback onOpenLauncher;
+  final VoidCallback onOpenWelcome;
+  final VoidCallback onLaunchTerminal;
+  final VoidCallback onLaunchFiles;
+
+  const DesktopDock({
+    super.key,
+    required this.onOpenLauncher,
+    required this.onOpenWelcome,
+    required this.onLaunchTerminal,
+    required this.onLaunchFiles,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        height: 68,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.15)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 15),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildDockItem(CupertinoIcons.square_grid_2x2, onOpenLauncher),
+            _buildDockItem(CupertinoIcons.home, onOpenWelcome),
+            _buildDockItem(CupertinoIcons.folder, onLaunchFiles),
+            _buildDockItem(CupertinoIcons.device_laptop, onLaunchTerminal),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDockItem(IconData icon, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6.0),
       child: MouseRegion(
@@ -343,14 +623,14 @@ class _DesktopShellState extends State<DesktopShell> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: bg,
+              color: Colors.white.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 5, offset: const Offset(0, 2)),
               ],
             ),
             child: Center(
-              child: Icon(icon, color: Colors.white, size: 26),
+              child: Icon(icon, color: Colors.white, size: 24),
             ),
           ),
         ),

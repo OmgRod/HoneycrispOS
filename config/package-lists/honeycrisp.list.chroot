@@ -34,3 +34,7 @@ live-boot
 live-config
 live-config-systemd
 systemd-sysv
+
+# Theme and Window Decorator Support
+gtk2-engines-murrine
+gnome-themes-extra
