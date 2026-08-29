@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-dev \
     liblzma-dev \
     live-build \
+    sassc \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter \
